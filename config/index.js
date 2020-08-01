@@ -1,0 +1,1 @@
+exports.redis = require(`./${process.env.NODE_ENV}/redis.json`);
