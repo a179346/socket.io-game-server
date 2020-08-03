@@ -11,6 +11,11 @@ const app = express();
 app.use(cors());
 const server = http.createServer(app);
 const io = socketio(server);
+
+const redisAdapter = require('socket.io-redis');
+const redisConfig = require('./config').redis;
+io.adapter(redisAdapter(redisConfig));
+
 const serverStatus = { status: 'running', sockets: [], server };
 gracefulShutDown.createCleanUpFunction(serverStatus);
 
