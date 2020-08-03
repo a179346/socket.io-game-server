@@ -12,7 +12,18 @@ const server = http.createServer(app);
 const io = socketio(server);
 
 io.on('connection', socket => {
-  socket.on('joinRoom', async ({ username, roomId })=>{
+  socket.onHandel = function (event, callBack) {
+    socket.on(event, async (...data) => {
+      try {
+        await callBack(...data);
+      } catch (error) {
+        console.error(error);
+        socket.emit('customError', error.message);
+      }
+    });
+  };
+
+  socket.onHandel('joinRoom', async ({ username, roomId })=>{
     const userId = socket.id;
     const roomStatusResult = await roomStatus.joinRoom(roomId, userId, username);
 
@@ -28,7 +39,7 @@ io.on('connection', socket => {
     socket.emit('userId', userId);
   });
 
-  socket.on('ready', async ()=>{
+  socket.onHandel('ready', async () => {
     const { userId, username, roomId, number } = socket.payload;
     const setPlayerData = {};
     setPlayerData[`player${number}`] = JSON.stringify({ userId, username, status: roomStatus.PLAYER_STATUS.READY });
@@ -53,13 +64,13 @@ io.on('connection', socket => {
     io.to(roomId).emit('roomUsers', formatRoomUsers(roomStatusResult));
   });
 
-  socket.on('bet', async (betIndex)=>{
+  socket.onHandel('bet', async (betIndex)=>{
     const { roomId, number } = socket.payload;
     const betResult = await roomBet.bet(roomId, number, betIndex);
     await gameEndCheck(betResult, roomId);
   });
 
-  socket.on('disconnect', async() => {
+  socket.onHandel('disconnect', async() => {
     if (socket.payload) {
       const { roomId, number } = socket.payload;
       const roomStatusResult = await roomStatus.leaveRoom(roomId, number);

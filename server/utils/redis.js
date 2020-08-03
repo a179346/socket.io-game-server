@@ -5,6 +5,6 @@ const config = require('../config').redis;
 bluebird.promisifyAll(redis);
 const client = redis.createClient(config);
 
-client.flushall();
+if (process.env.NODE_ENV === 'local') client.flushall();
 
 module.exports = client;

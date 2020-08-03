@@ -50,7 +50,7 @@
   const { username, roomId } = Qs.parse(location.search, { ignoreQueryPrefix: true });
   const socket = io(serverUrl);
 
-  socket.on('error', (err) => {
+  function errorHandler(err) {
     return Swal.fire({
       icon: 'error',
       title: err
@@ -58,7 +58,10 @@
       .then(() => {
         window.location.href = './index.html';
       });
-  });
+  }
+
+  socket.on('error', errorHandler);
+  socket.on('customError', errorHandler);
 
   const DEFAULT_GAME_BET = [{ betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }];
   const vm = new Vue({
