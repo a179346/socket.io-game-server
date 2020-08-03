@@ -2,6 +2,7 @@ require('./system/initEnv.js');
 const http = require('http');
 const express = require('express');
 const cors = require('cors');
+const gracefulShutDown = require('./system/gracefulShutDown');
 const socketio = require('socket.io');
 const roomStatus = require('./dao/roomStatus');
 const roomBet = require('./dao/roomBet');
@@ -10,11 +11,14 @@ const app = express();
 app.use(cors());
 const server = http.createServer(app);
 const io = socketio(server);
+const serverStatus = { status: 'running', sockets: [], server };
+gracefulShutDown.createCleanUpFunction(serverStatus);
 
 io.on('connection', socket => {
   socket.onHandel = function (event, callBack) {
     socket.on(event, async (...data) => {
       try {
+        if (serverStatus.status !== 'running' && event !== 'disconnect') throw new Error('server is shutting down');
         await callBack(...data);
       } catch (error) {
         console.error(error);
@@ -23,11 +27,12 @@ io.on('connection', socket => {
     });
   };
 
-  socket.onHandel('joinRoom', async ({ username, roomId })=>{
+  socket.onHandel('joinRoom', async ({ username, roomId }) => {
     const userId = socket.id;
     const roomStatusResult = await roomStatus.joinRoom(roomId, userId, username);
 
     socket.join(roomId);
+    serverStatus.sockets.push(socket);
 
     const roomUsers = formatRoomUsers(roomStatusResult);
     const number = (roomUsers.findIndex(u => (u && u.userId === userId) ) + 1);
@@ -70,7 +75,8 @@ io.on('connection', socket => {
     await gameEndCheck(betResult, roomId);
   });
 
-  socket.onHandel('disconnect', async() => {
+  socket.onHandel('disconnect', async () => {
+    serverStatus.sockets = serverStatus.sockets.filter(s=> s!==socket);
     if (socket.payload) {
       const { roomId, number } = socket.payload;
       const roomStatusResult = await roomStatus.leaveRoom(roomId, number);
