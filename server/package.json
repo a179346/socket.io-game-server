@@ -25,6 +25,7 @@
   "homepage": "https://github.com/a179346/socket.io-game-server#readme",
   "dependencies": {
     "bluebird": "^3.7.2",
+    "cors": "^2.8.5",
     "express": "^4.17.1",
     "redis": "^3.0.2",
     "socket.io": "^2.3.0",

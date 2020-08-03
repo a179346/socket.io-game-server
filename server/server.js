@@ -1,15 +1,17 @@
 require('./system/initEnv.js');
 const http = require('http');
 const express = require('express');
+const cors = require('cors');
 const socketio = require('socket.io');
 const roomStatus = require('./dao/roomStatus');
 const roomBet = require('./dao/roomBet');
 
 const app = express();
+app.use(cors());
 const server = http.createServer(app);
 const io = socketio(server);
 
-io.on('connection', socket=>{
+io.on('connection', socket => {
   socket.on('joinRoom', async ({ username, roomId })=>{
     const userId = socket.id;
     const roomStatusResult = await roomStatus.joinRoom(roomId, userId, username);

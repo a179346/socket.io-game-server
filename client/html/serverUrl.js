@@ -1,0 +1,1 @@
+const serverUrl = 'myec2:3000';

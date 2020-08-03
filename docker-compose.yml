@@ -1,13 +1,23 @@
 version: "2"
 services:
+
   server:
     container_name: "socket-game-server"
     command: npm run local
-    build: .
+    build: ./server
     ports:
       - "3000:3000"
     volumes:
-      - .:/usr/src/app
+      - ./server:/usr/src/app
+
+  client:
+    container_name: "socket-game-client"
+    build: ./client
+    ports:
+      - "3001:80"
+    volumes:
+      - ./client/html:/usr/share/nginx/html
+
   redis:
     image: redis:6.0
     ports:
