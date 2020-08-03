@@ -118,3 +118,9 @@ exports.leaveRoom = async(roomId, playerNumber)=>{
   await redis.delAsync(redisKey);
   return undefined;
 };
+
+exports.getRoomIds = async () => {
+  const prefix = getRedisKey('');
+  const keys = await redis.keysAsync(prefix+'*');
+  return keys.map(key =>key.replace(prefix, ''));
+};

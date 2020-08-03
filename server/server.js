@@ -19,6 +19,11 @@ io.adapter(redisAdapter(redisConfig));
 const serverStatus = { status: 'running', sockets: [], server };
 gracefulShutDown.createCleanUpFunction(serverStatus);
 
+app.get('/roomIds', async(req, res) => {
+  const roomIds = await roomStatus.getRoomIds();
+  res.send(roomIds);
+});
+
 io.on('connection', socket => {
   socket.onHandel = function (event, callBack) {
     socket.on(event, async (...data) => {

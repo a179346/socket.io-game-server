@@ -8,11 +8,79 @@
 </head>
 
 <body>
-  <form action="game.html">
-    <input type="text" placeholder="name" for="username" name="username" required>
-    <input type="text" placeholder="room" for="roomId" name="roomId" required>
-    <button type="submit">Enter</button>
-  </form>
+  <div id="app">
+    <form>
+      <input type="text" v-model="username" placeholder="name" for="username">
+      <select v-model="selectedRoomId">
+        <option value="" disabled selected>- JOIN ROOM -</option>
+        <option v-for="roomId in roomIds" v-bind:value="roomId">${roomId}</option>
+      </select>
+      <button type="submit" v-on:click="joinRoom">JOIN ROOM</button>
+      <input type="text" v-model="createdRoomId" placeholder="create room" for="createdRoomId">
+      <button type="submit" v-on:click="createRoom">CREATE ROOM</button>
+    </form>
+  </div>
 </body>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@9"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.11"></script>
+<script src="./serverUrl.js"></script>
+<script>
+  const vm = new Vue({
+    el: '#app',
+    delimiters: ['${', '}'],
+    data: {
+      roomIds: ['roomA', 'roomB', 'roomC'],
+      createdRoomId: '',
+      username: '',
+      selectedRoomId: ''
+    },
+    methods: {
+      createRoom: function (e) {
+        e.preventDefault();
+        if (!this.username) return this.showError('Please enter username');
+        if (!this.createdRoomId) return this.showError('Please enter create room');
+        this.toGameUrl(this.username, this.createdRoomId);
+      },
+      joinRoom: function (e) {
+        e.preventDefault();
+        if (!this.username) return this.showError('Please enter username');
+        if (!this.selectedRoomId) return this.showError('Please select a room');
+        this.toGameUrl(this.username, this.selectedRoomId);
+      },
+      toGameUrl: function (username, roomId) {
+        window.location.href = `/game.html?username=${username}&roomId=${roomId}`;
+      },
+      refreshRoomIds: function () {
+        const requestOptions = {
+          method: 'GET',
+          headers: (new Headers()).append("Content-Type", "application/json"),
+          mode: 'cors',
+        };
+
+        fetch(apiServerUrl + '/roomIds', requestOptions)
+          .then(response => response.json())
+          .then(roomIds => {
+            this.roomIds = roomIds;
+          })
+          .catch(error => console.log('error', error));
+      },
+      showError(err) {
+        return Swal.fire({
+          icon: 'error',
+          title: err.message || err
+        });
+      },
+    },
+    mounted: function () {
+      this.$nextTick(function () {
+        this.refreshRoomIds();
+        // setInterval(() => {
+        //   this.refreshRoomIds();
+        // }, 5000);
+      });
+    }
+  });
+</script>
 
 </html>

@@ -48,7 +48,7 @@
 
 <script>
   const { username, roomId } = Qs.parse(location.search, { ignoreQueryPrefix: true });
-  const socket = io(serverUrl);
+  const socket = io(wsServerUrl);
 
   function errorHandler(err) {
     return Swal.fire({
