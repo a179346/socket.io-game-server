@@ -96,3 +96,25 @@ exports.joinRoom = async(roomId, userId, username, retryCount = 0)=>{
   roomStatusResult = await exports.getRoomStatus(roomId);
   return roomStatusResult;
 };
+
+
+exports.leaveRoom = async(roomId, playerNumber)=>{
+  const redisKey = getRedisKey(roomId);
+
+  await redis.hdelAsync(redisKey, `player${playerNumber}`);
+
+  const roomStatusResult = await exports.getRoomStatus(roomId);
+
+  let isAllUserLeft = true;
+  for (let i = 1; i <= exports.MAX_ROOM_USERS_COUNT; i++) {
+    if (roomStatusResult[`player${i}`])
+      isAllUserLeft = false;
+  }
+
+  if (!isAllUserLeft)
+    return roomStatusResult;
+
+  // all user left the room.
+  await redis.delAsync(redisKey);
+  return undefined;
+};

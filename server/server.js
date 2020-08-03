@@ -56,34 +56,57 @@ io.on('connection', socket => {
   socket.on('bet', async (betIndex)=>{
     const { roomId, number } = socket.payload;
     const betResult = await roomBet.bet(roomId, number, betIndex);
-    if (!betResult) return;
-    let totalBetPlayer = 0;
-    for (let num of betResult) {
-      if (num) totalBetPlayer+=1;
-    }
-    let roomStatusResult = await roomStatus.getRoomStatus(roomId);
-    const roomUsers = formatRoomUsers(roomStatusResult);
-    const playings = playingPlayerCount(roomUsers);
-
-    let gameBet = formatGameResult(betResult, totalBetPlayer >= playings);
-    io.to(roomId).emit('gameBet', gameBet);
-    if (totalBetPlayer < playings) return;
-
-    // Everyone has bet => game end
-    const winNumber = gameBet.find(b => b.isWin).betUserNum;
-    if (!winNumber) io.to(roomId).emit('sysMessage', 'No body win :(');
-    else io.to(roomId).emit('sysMessage', roomUsers[winNumber - 1].username + ' win !');
-
-    const gameEndStatus = formatGameEndStatus(roomUsers);
-    await roomStatus.setRoomStatus(roomId, gameEndStatus);
-    roomStatusResult = await roomStatus.getRoomStatus(roomId);
-    io.to(roomId).emit('roomUsers', formatRoomUsers(roomStatusResult));
+    await gameEndCheck(betResult, roomId);
   });
 
-  socket.on('disconnect', ()=>{
+  socket.on('disconnect', async() => {
+    if (socket.payload) {
+      const { roomId, number } = socket.payload;
+      const roomStatusResult = await roomStatus.leaveRoom(roomId, number);
 
+      if (!roomStatusResult) {
+        // nobody in the room
+        await roomBet.deleteRoom(roomId);
+        return;
+      }
+
+      // someone still in the room
+      io.to(roomId).emit('roomUsers', formatRoomUsers(roomStatusResult));
+      if (roomStatusResult.roomStatus === roomStatus.ROOM_STATUS.PLAYING) {
+        // delete bet by this user
+        let betResult = await roomBet.leaveRoom(roomId, number);
+        if (!betResult) betResult = await roomBet.getGameBet(roomId);
+        await gameEndCheck(betResult, roomId);
+      }
+    }
   });
 });
+
+async function gameEndCheck(betResult, roomId) {
+  if (!betResult) return;
+
+  let totalBetPlayer = 0;
+  for (let num of betResult) {
+    if (num) totalBetPlayer+=1;
+  }
+  let roomStatusResult = await roomStatus.getRoomStatus(roomId);
+  const roomUsers = formatRoomUsers(roomStatusResult);
+  const playings = playingPlayerCount(roomUsers);
+
+  let gameBet = formatGameResult(betResult, totalBetPlayer >= playings);
+  io.to(roomId).emit('gameBet', gameBet);
+  if (totalBetPlayer < playings) return;
+
+  // Everyone has bet => game end
+  const winNumber = gameBet.find(b => b.isWin).betUserNum;
+  if (!winNumber) io.to(roomId).emit('sysMessage', 'No body win :(');
+  else io.to(roomId).emit('sysMessage', roomUsers[winNumber - 1].username + ' win !');
+
+  const gameEndStatus = formatGameEndStatus(roomUsers);
+  await roomStatus.setRoomStatus(roomId, gameEndStatus);
+  roomStatusResult = await roomStatus.getRoomStatus(roomId);
+  io.to(roomId).emit('roomUsers', formatRoomUsers(roomStatusResult));
+}
 
 function formatGameResult(betResult, getWin) {
   let winIdx = -1;
