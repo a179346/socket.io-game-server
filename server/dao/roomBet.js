@@ -21,12 +21,12 @@ exports.bet = async(roomId, playerNumber, betIndex)=>{
   const idxs = Object.keys(allBets);
   const result = new Array(exports.BET_COUNT).fill(0);
   for (let idx of idxs) {
+    result[idx] = allBets[idx];
     if (idx === `${betIndex}`) continue;
     if (allBets[idx] == playerNumber) {
       await redis.hdelAsync(redisKey, idx);
       return false;
     }
-    result[idx] = allBets[idx];
   }
   return result;
 };

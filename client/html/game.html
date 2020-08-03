@@ -8,7 +8,34 @@
 </head>
 
 <body>
-  <h1>Hello World</h1>
+  <div id="app">
+    <ul>
+      <li v-for="(item, index) in roomUsers">
+        ${ index } - ${ item ? item.username : '' } - ${ item ? item.status : '' }
+      </li>
+    </ul>
+    <hr>
+    <ul>
+      <li v-for="(item, index) in messages">
+        ${ item.message }
+      </li>
+    </ul>
+    <hr>
+    <div v-if="playerStatus === 'waiting'">WAITING</div>
+    <div v-else>
+      <h2>Game Bet</h2>
+      <ul>
+        <li v-for="(item, index) in gameBet">
+          ${index} - ${ item.betUserNum } - ${ item.isWin ? 'WIN' : '' } -
+          <button v-if="playerStatus === 'playing'" v-on:click="bet($event,index)">Bet Here</button>
+        </li>
+      </ul>
+      <div v-if="playerStatus === 'ready'">Wait everyone ready to start.</div>
+      <div v-if="playerStatus === 'not_ready'">
+        <button v-on:click="ready">READY</button>
+      </div>
+    </div>
+  </div>
 </body>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@9"></script>
@@ -33,7 +60,51 @@
       });
   });
 
+  const DEFAULT_GAME_BET = [{ betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }, { betUserNum: 0, isWin: false }];
+  const vm = new Vue({
+    el: '#app',
+    delimiters: ['${', '}'],
+    data: {
+      roomUsers: [
+        { username: 'userA', status: 'waiting' },
+        { username: 'userB', status: 'waiting' },
+        { username: 'userC', status: 'waiting' },
+      ],
+      userId: '',
+      messages: [],
+      gameBet: DEFAULT_GAME_BET,
+    },
+    methods: {
+      ready: function () {
+        socket.emit('ready', '');
+      },
+      bet: function (event, idx) {
+        socket.emit('bet', idx);
+      }
+    },
+    computed: {
+      playerStatus: function () {
+        for (let user of this.roomUsers) {
+          if (user && user.userId === this.userId)
+            return user.status;
+        }
+        return 'waiting';
+      }
+    },
+    mounted: function () {
+      this.$nextTick(function () {
+        socket.on('userId', userId => this.userId = userId);
+        socket.on('resetGameBet', () => this.gameBet = DEFAULT_GAME_BET);
+        socket.on('roomUsers', (roomUsers) => {
+          this.roomUsers = roomUsers;
+        });
+        socket.on('sysMessage', (message) => this.messages.push({ type: 'sys', message }));
+        socket.on('gameBet', (data) => this.gameBet = data);
 
+        socket.emit('joinRoom', { username, roomId });
+      })
+    }
+  });
 </script>
 
 

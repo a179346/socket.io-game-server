@@ -82,11 +82,12 @@ exports.joinRoom = async(roomId, userId, username, retryCount = 0)=>{
       return (await exports.joinRoom(roomId, userId, username, retryCount));
     }
   } else {
+    const redisKey = getRedisKey(roomId);
     let playerStatus = roomStatusResult.roomStatus === exports.ROOM_STATUS.WAITING ?
       exports.PLAYER_STATUS.NOT_READY : exports.PLAYER_STATUS.WAITING;
     let setPlayerResult = 0;
     for (let playerRoomNumber = 1; playerRoomNumber<=exports.MAX_ROOM_USERS_COUNT;playerRoomNumber+=1) {
-      setPlayerResult = await redis.hsetnxAsync(`player${playerRoomNumber}`, JSON.stringify({ userId, username, status: playerStatus }));
+      setPlayerResult = await redis.hsetnxAsync(redisKey, `player${playerRoomNumber}`, JSON.stringify({ userId, username, status: playerStatus }));
       if (setPlayerResult) break;
     }
     if (!setPlayerResult) throw new Error('The room is full');
