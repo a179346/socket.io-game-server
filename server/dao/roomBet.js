@@ -1,12 +1,62 @@
-const redis = require('../utils/redis');
+const { client: redis, watchKey } = require('../utils/redis');
+const roomStatus = require('./roomStatus');
 
 const getRedisKey = (roomId)=> `roomBet:${roomId}`;
 
 exports.BET_COUNT = 9;
 
-exports.reset = async(roomId)=>{
+exports.BET_STATUS = {
+  'PLAYING': 'playing',
+  'END': 'end',
+};
+
+exports.initValueChangeEvent = function (io) {
+  watchKey(/^roomBet:/, async (key) => {
+    const roomId = key.replace(getRedisKey(''), '');
+
+    const gameBetResult = await exports.getGameBet(roomId);
+    if (!gameBetResult) return;
+    const keys = Object.keys(gameBetResult);
+    const betPlayers = keys.length - 1;
+    const playingPlayers = gameBetResult.playingPlayers;
+
+    let winIdx = -1;
+    if (betPlayers >= playingPlayers) {
+      winIdx = Math.floor(Math.random() * exports.BET_COUNT);
+    }
+
+    const result = new Array(exports.BET_COUNT);
+    let winUserNum;
+
+    for (let i = 0; i < exports.BET_COUNT; i+=1) {
+      result[i] = { betUserNum: gameBetResult[i], isWin: i === winIdx };
+      if (result[i].isWin) winUserNum = result[i].betUserNum;
+    }
+
+    io.to(roomId).emit('gameBet', result);
+
+    // game still playing
+    if (betPlayers < playingPlayers) return;
+
+    // game end
+    if (!winUserNum) io.to(roomId).emit('sysMessage', 'No body win :(');
+    else {
+      let winPlayer = await roomStatus.getPlayer(roomId, winUserNum);
+      winPlayer = winPlayer ? JSON.parse(winPlayer) : null;
+      if (winPlayer)
+        io.to(roomId).emit('sysMessage', winPlayer.username + ' win !');
+    }
+
+    await roomStatus.toWaiting(roomId);
+  });
+};
+
+exports.reset = async (roomId, playingPlayers) => {
   const redisKey = getRedisKey(roomId);
-  await redis.delAsync(redisKey);
+  await redis.multi()
+    .del(redisKey)
+    .hset(redisKey, 'playingPlayers', playingPlayers)
+    .execAsync();
 };
 
 exports.deleteRoom = async (roomId) => {
@@ -23,48 +73,33 @@ exports.bet = async(roomId, playerNumber, betIndex)=>{
     .execAsync();
   if (setBetResult[0] !== 1) return false;
   const allBets = setBetResult[1];
-  const idxs = Object.keys(allBets);
-  const result = new Array(exports.BET_COUNT).fill(0);
-  for (let idx of idxs) {
-    result[idx] = allBets[idx];
-    if (idx === `${betIndex}`) continue;
-    if (allBets[idx] == playerNumber) {
-      await redis.hdelAsync(redisKey, idx);
-      return false;
+
+  for (const key in allBets) {
+    if (key == betIndex || key === 'playingPlayers') continue;
+    if (allBets[key] == playerNumber) {
+      await redis.hdelAsync(redisKey, betIndex);
     }
   }
-  return result;
 };
 
 exports.leaveRoom = async (roomId, playerNumber) => {
   const redisKey = getRedisKey(roomId);
-  const allBets = await redis.hgetallAsync(redisKey);
-  if (!allBets) return false;
+  const gameBet = await exports.getGameBet(roomId);
 
-  for (let idx in allBets) {
-    if (allBets[idx] == playerNumber) {
-      const betResult = await redis.multi()
-        .hdel(redisKey, idx)
-        .hgetall(redisKey)
-        .execAsync();
-      const allBets = betResult[1];
-      const result = new Array(exports.BET_COUNT).fill(0);
-      for (let idx in allBets) {
-        result[idx] = allBets[idx];
-      }
-      return result;
-    }
+  const multi = redis.multi();
+  multi.hincrby(redisKey, 'playingPlayers', -1);
+
+  for (let i = 0; i < exports.BET_COUNT; i += 1) {
+    if (gameBet[i] == playerNumber)
+      multi.hdel(redisKey, i);
   }
-  return false;
+
+  await multi.execAsync();
 };
 
 exports.getGameBet = async(roomId)=>{
   const redisKey = getRedisKey(roomId);
-  const allBets = await redis.hgetallAsync(redisKey);
-  if (!allBets) return;
-  const result = new Array(exports.BET_COUNT).fill(0);
-  for (let idx in allBets) {
-    result[idx] = allBets[idx];
-  }
+  const result = await redis.hgetallAsync(redisKey);
+
   return result;
 };

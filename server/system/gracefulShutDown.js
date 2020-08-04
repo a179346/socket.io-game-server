@@ -1,4 +1,3 @@
-const redis = require('../utils/redis');
 exports.createCleanUpFunction = function (serverStatus) {
   const cleanUp = function (type) {
     console.log('[graceful shutdown start] receive: ' + type);
@@ -14,6 +13,7 @@ exports.createCleanUpFunction = function (serverStatus) {
       console.log('[graceful shutdown] Closing http server ...');
       serverStatus.server.close(() => {
         console.log('[graceful shutdown] disconnecting redis ...');
+        const redis = require('../utils/redis');
         redis.quit();
         setTimeout(() => {
           console.log('[graceful shutdown end]');

@@ -1,4 +1,10 @@
 {
-  "host": "redis",
-  "port": "6379"
+  "main": {
+    "host": "redis",
+    "port": "6379"
+  },
+  "pubsub":{
+    "host": "redis",
+    "port": "6379"
+  }
 }
