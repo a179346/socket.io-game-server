@@ -40,9 +40,10 @@ exports.PLAYER_STATUS = {
 
 const getRedisKey = (roomId) => `roomStatus:${roomId}`;
 
-exports.initValueChangeEvent = function (io) {
+exports.initValueChangeEvent = function (io, createdRoomsByThisNode) {
   watchKey(/^roomStatus:/, async (key) => {
     const roomId = key.replace(getRedisKey(''), '');
+    if (!createdRoomsByThisNode.has(roomId)) return;
 
     const roomStatusResult = await exports.getRoomStatus(roomId);
     if (!roomStatusResult) return;
@@ -67,6 +68,7 @@ exports.initValueChangeEvent = function (io) {
       // all user left the room.
       await exports.deleteRoom(roomId);
       await roomBet.deleteRoom(roomId);
+      createdRoomsByThisNode.delete(roomId);
       return;
     }
 
@@ -97,12 +99,6 @@ exports.initValueChangeEvent = function (io) {
   });
 };
 
-exports.isRoomExist = async(roomId)=>{
-  const redisKey = getRedisKey(roomId);
-  const result = await redis.existsAsync(redisKey);
-  return result;
-};
-
 exports.getRoomStatus = async (roomId)=>{
   const redisKey = getRedisKey(roomId);
   const result = await redis.hgetallAsync(redisKey);
@@ -114,10 +110,11 @@ exports.setRoomStatus = async(roomId, setData)=>{
   await redis.hmsetAsync(redisKey, setData);
 };
 
-exports.joinRoom = async (roomId, userId, username) => {
+exports.joinRoom = async (roomId, userId, username, createdRoomsByThisNode) => {
   const redisKey = getRedisKey(roomId);
 
-  await redis.hsetnxAsync(redisKey, 'roomStatus', exports.ROOM_STATUS.WAITING);
+  const isCreated = await redis.hsetnxAsync(redisKey, 'roomStatus', exports.ROOM_STATUS.WAITING);
+  if (isCreated) createdRoomsByThisNode.add(roomId);
 
   const roomStatusResult = await redis.hgetAsync(redisKey, 'roomStatus');
 

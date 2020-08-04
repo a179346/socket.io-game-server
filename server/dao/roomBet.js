@@ -10,9 +10,10 @@ exports.BET_STATUS = {
   'END': 'end',
 };
 
-exports.initValueChangeEvent = function (io) {
+exports.initValueChangeEvent = function (io, createdRoomsByThisNode) {
   watchKey(/^roomBet:/, async (key) => {
     const roomId = key.replace(getRedisKey(''), '');
+    if (!createdRoomsByThisNode.has(roomId)) return;
 
     const gameBetResult = await exports.getGameBet(roomId);
     if (!gameBetResult) return;

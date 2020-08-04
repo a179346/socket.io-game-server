@@ -18,9 +18,10 @@ io.adapter(redisAdapter(redisConfig.pubsub));
 
 const serverStatus = { status: 'running', sockets: [], server };
 gracefulShutDown.createCleanUpFunction(serverStatus);
+const createdRoomsByThisNode = new Set();
 
-roomStatus.initValueChangeEvent(io);
-roomBet.initValueChangeEvent(io);
+roomStatus.initValueChangeEvent(io, createdRoomsByThisNode);
+roomBet.initValueChangeEvent(io, createdRoomsByThisNode);
 
 app.get('/roomIds', async(req, res) => {
   const roomIds = await roomStatus.getRoomIds();
@@ -45,7 +46,7 @@ io.on('connection', socket => {
     serverStatus.sockets.push(socket);
     socket.join(roomId);
 
-    const number = await roomStatus.joinRoom(roomId, userId, username);
+    const number = await roomStatus.joinRoom(roomId, userId, username, createdRoomsByThisNode);
     socket.payload = { userId, username, number, roomId };
 
     io.to(roomId).emit('sysMessage', username + ' join the room.');
