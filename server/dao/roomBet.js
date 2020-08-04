@@ -1,5 +1,6 @@
 const { client: redis, watchKey } = require('../utils/redis');
 const roomStatus = require('./roomStatus');
+const createdRoomsByThisNode = require('../system/createdRoomsByThisNode').createdRoomsByThisNode;
 
 const getRedisKey = (roomId)=> `roomBet:${roomId}`;
 
@@ -10,7 +11,7 @@ exports.BET_STATUS = {
   'END': 'end',
 };
 
-exports.initValueChangeEvent = function (io, createdRoomsByThisNode) {
+exports.initValueChangeEvent = function (io) {
   watchKey(/^roomBet:/, async (key) => {
     const roomId = key.replace(getRedisKey(''), '');
     if (!createdRoomsByThisNode.has(roomId)) return;

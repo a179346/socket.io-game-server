@@ -2,7 +2,7 @@ require('./system/initEnv.js');
 const http = require('http');
 const express = require('express');
 const cors = require('cors');
-const gracefulShutDown = require('./system/gracefulShutDown');
+require('./system/gracefulShutDown');
 const socketio = require('socket.io');
 const roomStatus = require('./dao/roomStatus');
 const roomBet = require('./dao/roomBet');
@@ -16,12 +16,11 @@ const redisAdapter = require('socket.io-redis');
 const redisConfig = require('./config').redis;
 io.adapter(redisAdapter(redisConfig.pubsub));
 
-const serverStatus = { status: 'running', sockets: [], server };
-gracefulShutDown.createCleanUpFunction(serverStatus);
-const createdRoomsByThisNode = new Set();
+const { serverStatus, initServerStatus } = require('./system/serverStatus');
+initServerStatus(server);
 
-roomStatus.initValueChangeEvent(io, createdRoomsByThisNode);
-roomBet.initValueChangeEvent(io, createdRoomsByThisNode);
+roomStatus.initValueChangeEvent(io);
+roomBet.initValueChangeEvent(io);
 
 app.get('/roomIds', async(req, res) => {
   const roomIds = await roomStatus.getRoomIds();
@@ -43,10 +42,10 @@ io.on('connection', socket => {
 
   socket.onHandel('joinRoom', async ({ username, roomId }) => {
     const userId = socket.id;
-    serverStatus.sockets.push(socket);
+    serverStatus.sockets.add(socket);
     socket.join(roomId);
 
-    const number = await roomStatus.joinRoom(roomId, userId, username, createdRoomsByThisNode);
+    const number = await roomStatus.joinRoom(roomId, userId, username);
     socket.payload = { userId, username, number, roomId };
 
     io.to(roomId).emit('sysMessage', username + ' join the room.');
@@ -67,11 +66,14 @@ io.on('connection', socket => {
   });
 
   socket.onHandel('disconnect', async () => {
-    serverStatus.sockets = serverStatus.sockets.filter(s=> s!==socket);
-    if (socket.payload) {
-      const { roomId, number } = socket.payload;
-      await roomBet.leaveRoom(roomId, number);
-      await roomStatus.leaveRoom(roomId, number);
+    try {
+      serverStatus.sockets.delete(socket);
+    } finally {
+      if (socket.payload) {
+        const { roomId, number } = socket.payload;
+        await roomBet.leaveRoom(roomId, number);
+        await roomStatus.leaveRoom(roomId, number);
+      }
     }
   });
 });

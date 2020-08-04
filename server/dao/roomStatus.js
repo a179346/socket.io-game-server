@@ -1,5 +1,6 @@
 const { client: redis, watchKey } = require('../utils/redis');
 const roomBet =require('./roomBet');
+const createdRoomsByThisNode = require('../system/createdRoomsByThisNode').createdRoomsByThisNode;
 
 exports.MAX_ROOM_USERS_COUNT = 5;
 
@@ -40,7 +41,7 @@ exports.PLAYER_STATUS = {
 
 const getRedisKey = (roomId) => `roomStatus:${roomId}`;
 
-exports.initValueChangeEvent = function (io, createdRoomsByThisNode) {
+exports.initValueChangeEvent = function (io) {
   watchKey(/^roomStatus:/, async (key) => {
     const roomId = key.replace(getRedisKey(''), '');
     if (!createdRoomsByThisNode.has(roomId)) return;
@@ -110,7 +111,7 @@ exports.setRoomStatus = async(roomId, setData)=>{
   await redis.hmsetAsync(redisKey, setData);
 };
 
-exports.joinRoom = async (roomId, userId, username, createdRoomsByThisNode) => {
+exports.joinRoom = async (roomId, userId, username) => {
   const redisKey = getRedisKey(roomId);
 
   const isCreated = await redis.hsetnxAsync(redisKey, 'roomStatus', exports.ROOM_STATUS.WAITING);

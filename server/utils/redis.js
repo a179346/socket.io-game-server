@@ -8,10 +8,11 @@ const client = redis.createClient(config.main);
 if (process.env.NODE_ENV === 'local') client.flushall();
 
 const pubsub_client = redis.createClient(config.pubsub);
-pubsub_client.config('set', 'notify-keyspace-events', 'KEh');
+pubsub_client.config('set', 'notify-keyspace-events', 'KEhs');
 pubsub_client.subscribe('__keyevent@0__:hset');
 pubsub_client.subscribe('__keyevent@0__:hdel');
 pubsub_client.subscribe('__keyevent@0__:hincrby');
+pubsub_client.subscribe('__keyevent@0__:sadd');
 
 const watchKeyArray = [];
 pubsub_client.on('message', function (event, key) {
