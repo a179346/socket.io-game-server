@@ -1,4 +1,4 @@
-const createdRoomsByThisNode = require('./createdRoomsByThisNode').createdRoomsByThisNode;
+const { quit:quitNode } = require('./createdRoomsByThisNode');
 const { serverStatus } = require('./serverStatus');
 
 const cleanUp = function (type) {
@@ -12,20 +12,20 @@ const cleanUp = function (type) {
     socket.disconnect();
   }
 
-  const redis = require('../utils/redis');
-  redis.client.sadd('createdRoomsByThisNode', Array.from(createdRoomsByThisNode), () => {
-    setTimeout(() => {
+  // wait all sockets disconnected
+  setTimeout(() => {
+    quitNode(() => {
       console.log('[graceful shutdown] Closing http server ...');
       serverStatus.server.close(() => {
+        const redis = require('../utils/redis');
         console.log('[graceful shutdown] disconnecting redis ...');
-        redis.quit();
-        setTimeout(() => {
+        redis.quit(() => {
           console.log('[graceful shutdown end]');
           process.exit(0);
-        }, 1000);
+        });
       });
-    }, 2000);
-  });
+    });
+  }, 2000);
 };
 
 process.on('SIGTERM', function () {

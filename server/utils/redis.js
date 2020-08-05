@@ -24,9 +24,10 @@ pubsub_client.on('message', function (event, key) {
 
 exports.client = client;
 
-exports.quit = function () {
-  client.quit();
-  pubsub_client.quit();
+exports.quit = function (callback) {
+  client.quit(() => {
+    pubsub_client.quit(callback);
+  });
 };
 
 exports.watchKey = function (pattern, func) {
