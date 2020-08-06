@@ -1,5 +1,5 @@
 const { client: redis, watchKey } = require('../utils/redis');
-const roomBet =require('./roomBet');
+const roomBet = require('./roomBet');
 const createdRoomsByThisNode = require('../system/createdRoomsByThisNode').createdRoomsByThisNode;
 
 exports.MAX_ROOM_USERS_COUNT = 5;
@@ -84,11 +84,11 @@ exports.initValueChangeEvent = function (io) {
       roomStatus: exports.ROOM_STATUS.PLAYING,
     };
 
-    for (let i=0;i<exports.MAX_ROOM_USERS_COUNT;i++) {
+    for (let i = 0;i < exports.MAX_ROOM_USERS_COUNT;i++) {
       const user = roomUsers[i];
       if (user) {
         user.status = exports.PLAYER_STATUS.PLAYING;
-        gameStartStatus[`player${i+1}`] = JSON.stringify(user);
+        gameStartStatus[`player${i + 1}`] = JSON.stringify(user);
       }
     }
     await exports.setRoomStatus(roomId, gameStartStatus);
@@ -100,13 +100,13 @@ exports.initValueChangeEvent = function (io) {
   });
 };
 
-exports.getRoomStatus = async (roomId)=>{
+exports.getRoomStatus = async (roomId) => {
   const redisKey = getRedisKey(roomId);
   const result = await redis.hgetallAsync(redisKey);
   return result;
 };
 
-exports.setRoomStatus = async(roomId, setData)=>{
+exports.setRoomStatus = async (roomId, setData) => {
   const redisKey = getRedisKey(roomId);
   await redis.hmsetAsync(redisKey, setData);
 };
@@ -123,7 +123,7 @@ exports.joinRoom = async (roomId, userId, username) => {
     exports.PLAYER_STATUS.NOT_READY : exports.PLAYER_STATUS.WAITING;
 
   let setPlayerResult = 0, playerRoomNumber = 1;
-  for (;playerRoomNumber<=exports.MAX_ROOM_USERS_COUNT;playerRoomNumber+=1) {
+  for (;playerRoomNumber <= exports.MAX_ROOM_USERS_COUNT;playerRoomNumber += 1) {
     setPlayerResult = await redis.hsetnxAsync(redisKey, `player${playerRoomNumber}`, JSON.stringify({ userId, username, status: playerStatus }));
     if (setPlayerResult) break;
   }
@@ -133,7 +133,7 @@ exports.joinRoom = async (roomId, userId, username) => {
 };
 
 
-exports.leaveRoom = async(roomId, playerNumber)=>{
+exports.leaveRoom = async (roomId, playerNumber) => {
   const redisKey = getRedisKey(roomId);
 
   await redis.hdelAsync(redisKey, `player${playerNumber}`);
@@ -146,8 +146,8 @@ exports.deleteRoom = async (roomId) => {
 
 exports.getRoomIds = async () => {
   const prefix = getRedisKey('');
-  const keys = await redis.keysAsync(prefix+'*');
-  return keys.map(key =>key.replace(prefix, ''));
+  const keys = await redis.keysAsync(prefix + '*');
+  return keys.map((key) => key.replace(prefix, ''));
 };
 
 exports.getPlayer = async (roomId, num) => {
@@ -169,11 +169,11 @@ exports.toWaiting = async (roomId) => {
   const gameEndStatus = {
     roomStatus: exports.ROOM_STATUS.WAITING,
   };
-  for (let i=0;i<exports.MAX_ROOM_USERS_COUNT;i++) {
+  for (let i = 0;i < exports.MAX_ROOM_USERS_COUNT;i++) {
     const user = roomUsers[i];
     if (user) {
       user.status = exports.PLAYER_STATUS.NOT_READY;
-      gameEndStatus[`player${i+1}`] = JSON.stringify(user);
+      gameEndStatus[`player${i + 1}`] = JSON.stringify(user);
     }
   }
 

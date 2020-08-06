@@ -16,7 +16,7 @@ pubsub_client.subscribe('__keyevent@0__:sadd');
 
 const watchKeyArray = [];
 pubsub_client.on('message', function (event, key) {
-  watchKeyArray.forEach(watchKey =>{
+  watchKeyArray.forEach((watchKey) => {
     if (watchKey.pattern.test(key))
       return watchKey.func(key, event);
   });

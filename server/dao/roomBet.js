@@ -2,7 +2,7 @@ const { client: redis, watchKey } = require('../utils/redis');
 const roomStatus = require('./roomStatus');
 const createdRoomsByThisNode = require('../system/createdRoomsByThisNode').createdRoomsByThisNode;
 
-const getRedisKey = (roomId)=> `roomBet:${roomId}`;
+const getRedisKey = (roomId) => `roomBet:${roomId}`;
 
 exports.BET_COUNT = 9;
 
@@ -30,7 +30,7 @@ exports.initValueChangeEvent = function (io) {
     const result = new Array(exports.BET_COUNT);
     let winUserNum;
 
-    for (let i = 0; i < exports.BET_COUNT; i+=1) {
+    for (let i = 0; i < exports.BET_COUNT; i += 1) {
       result[i] = { betUserNum: gameBetResult[i], isWin: i === winIdx };
       if (result[i].isWin) winUserNum = result[i].betUserNum;
     }
@@ -66,7 +66,7 @@ exports.deleteRoom = async (roomId) => {
   await redis.delAsync(redisKey);
 };
 
-exports.bet = async(roomId, playerNumber, betIndex)=>{
+exports.bet = async (roomId, playerNumber, betIndex) => {
   if (betIndex >= exports.BET_COUNT) return false;
   const redisKey = getRedisKey(roomId);
   const setBetResult = await redis.multi()
@@ -99,7 +99,7 @@ exports.leaveRoom = async (roomId, playerNumber) => {
   await multi.execAsync();
 };
 
-exports.getGameBet = async(roomId)=>{
+exports.getGameBet = async (roomId) => {
   const redisKey = getRedisKey(roomId);
   const result = await redis.hgetallAsync(redisKey);
 

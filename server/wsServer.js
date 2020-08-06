@@ -11,7 +11,7 @@ module.exports = function (server) {
   roomStatus.initValueChangeEvent(io);
   roomBet.initValueChangeEvent(io);
 
-  io.on('connection', socket => {
+  io.on('connection', (socket) => {
     socket.onHandel = function (event, callBack) {
       socket.on(event, async (...data) => {
         try {
@@ -44,7 +44,7 @@ module.exports = function (server) {
       await roomStatus.setRoomStatus(roomId, setPlayerData);
     });
 
-    socket.onHandel('bet', async (betIndex)=>{
+    socket.onHandel('bet', async (betIndex) => {
       const { roomId, number } = socket.payload;
       await roomBet.bet(roomId, number, betIndex);
     });
