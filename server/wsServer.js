@@ -12,19 +12,7 @@ module.exports = function (server) {
   roomBet.initValueChangeEvent(io);
 
   io.on('connection', (socket) => {
-    socket.onHandel = function (event, callBack) {
-      socket.on(event, async (...data) => {
-        try {
-          if (serverStatus.status !== 'running' && event !== 'disconnect') throw new Error('server is shutting down');
-          await callBack(...data);
-        } catch (error) {
-          console.error(error);
-          socket.emit('customError', error.message);
-        }
-      });
-    };
-
-    socket.onHandel('joinRoom', async ({ username, roomId }) => {
+    onHandle(socket, 'joinRoom', async ({ username, roomId }) => {
       const userId = socket.id;
       serverStatus.sockets.add(socket);
       socket.join(roomId);
@@ -36,7 +24,7 @@ module.exports = function (server) {
       socket.emit('userId', userId);
     });
 
-    socket.onHandel('ready', async () => {
+    onHandle(socket, 'ready', async () => {
       const { userId, username, roomId, number } = socket.payload;
       const setPlayerData = {};
       setPlayerData[`player${number}`] = JSON.stringify({ userId, username, status: roomStatus.PLAYER_STATUS.READY });
@@ -44,12 +32,12 @@ module.exports = function (server) {
       await roomStatus.setRoomStatus(roomId, setPlayerData);
     });
 
-    socket.onHandel('bet', async (betIndex) => {
+    onHandle(socket, 'bet', async (betIndex) => {
       const { roomId, number } = socket.payload;
       await roomBet.bet(roomId, number, betIndex);
     });
 
-    socket.onHandel('disconnect', async () => {
+    onHandle(socket, 'disconnect', async () => {
       try {
         serverStatus.sockets.delete(socket);
       } finally {
@@ -61,4 +49,16 @@ module.exports = function (server) {
       }
     });
   });
+
+  function onHandle (socket, event, callBack) {
+    socket.on(event, async (...data) => {
+      try {
+        if (serverStatus.status !== 'running' && event !== 'disconnect') throw new Error('server is shutting down');
+        await callBack(...data);
+      } catch (error) {
+        console.error(error);
+        socket.emit('customError', error.message);
+      }
+    });
+  }
 };
