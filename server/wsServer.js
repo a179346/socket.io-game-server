@@ -38,14 +38,11 @@ module.exports = function (server) {
     });
 
     onHandle(socket, 'disconnect', async () => {
-      try {
-        serverStatus.sockets.delete(socket);
-      } finally {
-        if (socket.payload) {
-          const { roomId, number } = socket.payload;
-          await roomBet.leaveRoom(roomId, number);
-          await roomStatus.leaveRoom(roomId, number);
-        }
+      serverStatus.sockets.delete(socket);
+      if (socket.payload) {
+        const { roomId, number } = socket.payload;
+        await roomBet.leaveRoom(roomId, number);
+        await roomStatus.leaveRoom(roomId, number);
       }
     });
   });
